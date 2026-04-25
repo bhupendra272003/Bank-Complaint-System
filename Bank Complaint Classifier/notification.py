@@ -2,13 +2,18 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import database as db
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # ========================================
-# EMAIL CONFIGURATION - FILL THESE
+# EMAIL CONFIGURATION - FROM ENV VARIABLES
 # ========================================
-EMAIL_ADDRESS = "bhupendrasinghdeora24@gmail.com"   # CHANGE: Apna email daal
-EMAIL_PASSWORD = "leag ggph cork cimm"              # CHANGE: 16-digit app password
-ADMIN_EMAIL = "bhupendrasinghdeora24@gmail.com"     # CHANGE: Admin email daal
+EMAIL_ADDRESS = os.getenv("EMAIL_ADDRESS")
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")    # CHANGE: Admin email daal
 
 def send_email_notification(to_email, complaint_id, customer_name, complaint_text, category, priority):
     try:
