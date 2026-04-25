@@ -1,0 +1,9 @@
+*.pyc
+__pycache__/
+complaints.db
+.env
+*.pkl
+venv/
+env/
+.vscode/
+*.xlsx

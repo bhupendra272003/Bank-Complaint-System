@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Complaint - Clerk</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='sunset.css') }}">
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-brand">🏦 Bank Complaint System</div>
+        <div class="navbar-menu">
+            <span>🌅 Welcome, {{ user.full_name or user.username }}</span>
+            <a href="{{ url_for('clerk_dashboard') }}">📊 Dashboard</a>
+            <a href="{{ url_for('change_password') }}">🔑 Change Password</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn-secondary" style="padding: 5px 15px;">Logout</a>
+        </div>
+    </div>
+
+    <div class="container" style="max-width: 800px;">
+        <div class="header">
+            <h1>📝 Register New Complaint</h1>
+            <p>Help customers by registering their complaints</p>
+        </div>
+
+        <div class="glass-card" style="padding: 30px;">
+            <form id="complaintForm" onsubmit="submitComplaint(event)">
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label>👤 Full Name *</label>
+                        <input type="text" name="customer_name" required placeholder="Customer full name">
+                    </div>
+                    <div class="form-group">
+                        <label>📞 Mobile Number *</label>
+                        <input type="tel" name="mobile" required placeholder="10-digit mobile" pattern="[0-9]{10}">
+                    </div>
+                </div>
+
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="form-group">
+                        <label>🆔 PAN / Aadhaar *</label>
+                        <input type="text" name="id_number" required placeholder="Enter PAN or Aadhaar">
+                    </div>
+                    <div class="form-group">
+                        <label>📧 Email</label>
+                        <input type="email" name="email" placeholder="customer@example.com">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>💬 Complaint Description *</label>
+                    <textarea name="complaint" required placeholder="Describe the issue in detail..."></textarea>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%;">🚀 Submit Complaint</button>
+            </form>
+
+            <div id="resultArea"></div>
+        </div>
+    </div>
+
+    <script>
+        for (let i = 0; i < 20; i++) {
+            let particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.width = Math.random() * 5 + 2 + 'px';
+            particle.style.height = particle.style.width;
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 8 + 's';
+            document.body.appendChild(particle);
+        }
+
+        async function submitComplaint(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const resultArea = document.getElementById('resultArea');
+            
+            resultArea.innerHTML = '<div class="toast info" style="position: static;">Processing...</div>';
+            
+            const response = await fetch('/clerk/submit', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            
+            if (result.error) {
+                resultArea.innerHTML = `<div class="toast error" style="position: static;">❌ ${result.error}</div>`;
+            } else {
+                resultArea.innerHTML = `
+                    <div class="glass-card" style="padding: 20px; margin-top: 20px;">
+                        <h3 style="color: #10b981;">✅ Complaint Registered!</h3>
+                        <p><strong>Complaint ID:</strong> ${result.complaint_id}</p>
+                        <p><strong>Category:</strong> ${result.category}</p>
+                        <p><strong>Priority:</strong> ${result.priority}</p>
+                        <p>Email notification sent to customer and admin.</p>
+                    </div>
+                `;
+                event.target.reset();
+                setTimeout(() => resultArea.innerHTML = '', 5000);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Bank Complaint System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='sunset.css') }}">
+    <style>
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .avatar {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #ff0000, #000000);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 48px;
+            box-shadow: var(--shadow-lg);
+        }
+        .role-badge {
+            display: inline-block;
+            background: var(--gradient-warm);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        .stats-mini {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-mini-card {
+            background: linear-gradient(135deg, #00ffea, #000200);
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid #ffe0cc;
+        }
+        .stat-mini-card h3 {
+            font-size: 28px;
+            font-weight: 800;
+            background: var(--gradient-warm);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: black;
+        }
+        .stat-mini-card p {
+            color: white;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .info-section {
+            background: linear-gradient(135deg, #54774d, #000000);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #ffe0cc;
+        }
+        .info-section h3 {
+            margin-bottom: 15px;
+            color: var(--deep-warm);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info-row {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid #ffe0cc;
+        }
+        .info-label {
+            width: 130px;
+            font-weight: 600;
+            color: silver;
+        }
+        .info-value {
+            flex: 1;
+            color:  #ffd5b9;
+        }
+        .edit-form {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #ffe0cc;
+        }
+        .edit-form.active {
+            display: block;
+            animation: fadeInUp 0.3s ease;
+        }
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            margin-left: 10px;
+            color: var(--deep-warm);
+        }
+        .category-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .category-tag {
+            background: var(--gradient-warm);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        .tabs-mini {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ffe0cc;
+            padding-bottom: 10px;
+        }
+        .tab-mini-btn {
+            background: none;
+            border: none;
+            padding: 8px 20px;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+        .tab-mini-btn.active {
+            background: var(--gradient-warm);
+            color: white;
+        }
+        .tab-mini-content {
+            display: none;
+        }
+        .tab-mini-content.active {
+            display: block;
+            animation: fadeInUp 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-brand">🏦 Bank Complaint System</div>
+        <div class="navbar-menu">
+            <span>🌅 Welcome, {{ user.full_name or user.username }}</span>
+            {% if current_user.role == 'admin' %}
+            <a href="{{ url_for('admin_dashboard') }}">📊 Dashboard</a>
+            {% else %}
+            <a href="{{ url_for('clerk_dashboard') }}">📊 Dashboard</a>
+            {% endif %}
+            <a href="{{ url_for('profile') }}" style="background: var(--gradient-warm); color: white;">👤 Profile</a>
+            <a href="{{ url_for('change_password') }}">🔑 Change Password</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn-secondary" style="padding: 5px 15px;">Logout</a>
+        </div>
+    </div>
+
+    <div class="container" style="max-width: 900px;">
+        <div class="glass-card" style="padding: 30px;">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="avatar">
+                    {% if current_user.role == 'admin' %}👑{% else %}👤{% endif %}
+                </div>
+                <h2>{{ user.full_name or user.username }}</h2>
+                <span class="role-badge">
+                    {% if current_user.role == 'admin' %}⭐ Administrator{% else %}📋 Clerk{% endif %}
+                </span>
+                <p style="color: black; margin-top: 10px;">Member since: {{ user.created_at[:10] if user.created_at else 'N/A' }}</p>
+            </div>
+
+            <!-- Mini Stats -->
+            <div class="stats-mini">
+                <div class="stat-mini-card">
+                    <h3>{{ stats.total }}</h3>
+                    <p>Total Complaints</p>
+                </div>
+                <div class="stat-mini-card">
+                    <h3>{{ stats.resolved }}</h3>
+                    <p>Resolved</p>
+                </div>
+                <div class="stat-mini-card">
+                    <h3>{{ stats.pending }}</h3>
+                    <p>Pending</p>
+                </div>
+            </div>
+
+            <!-- Mini Tabs -->
+            <div class="tabs-mini">
+                <button class="tab-mini-btn active" onclick="switchProfileTab('info')">📋 Personal Information</button>
+                <button class="tab-mini-btn" onclick="switchProfileTab('stats')">📊 My Performance</button>
+                <button class="tab-mini-btn" onclick="switchProfileTab('activity')">🕐 Recent Activity</button>
+            </div>
+
+            <!-- Personal Information Tab -->
+            <div id="infoTab" class="tab-mini-content active">
+                <div class="info-section">
+                    <h3>📋 Personal Details</h3>
+                    <div class="info-row">
+                        <div class="info-label">Username:</div>
+                        <div class="info-value">{{ user.username }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Full Name:</div>
+                        <div class="info-value" id="displayName">{{ user.full_name or 'Not set' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Email:</div>
+                        <div class="info-value" id="displayEmail">{{ user.email or 'Not set' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Mobile:</div>
+                        <div class="info-value" id="displayMobile">{{ user.mobile or 'Not set' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Department:</div>
+                        <div class="info-value" id="displayDept">{{ user.department or 'Not set' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Role:</div>
+                        <div class="info-value">{% if current_user.role == 'admin' %}Administrator{% else %}Clerk{% endif %}</div>
+                    </div>
+                    <button class="btn-primary" style="margin-top: 20px;" onclick="showEditForm()">✏️ Edit Profile</button>
+                </div>
+
+                <!-- Edit Form -->
+                <div id="editForm" class="edit-form">
+                    <h3>✏️ Edit Profile</h3>
+                    <form method="POST">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" name="full_name" value="{{ user.full_name or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" name="email" value="{{ user.email or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Mobile</label>
+                            <input type="tel" name="mobile" value="{{ user.mobile or '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label>Department</label>
+                            <input type="text" name="department" value="{{ user.department or '' }}" placeholder="e.g., Customer Service">
+                        </div>
+                        <div style="display: flex; gap: 15px;">
+                            <button type="submit" class="btn-primary">💾 Save Changes</button>
+                            <button type="button" class="btn-secondary" onclick="hideEditForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Performance Stats Tab -->
+            <div id="statsTab" class="tab-mini-content">
+                <div class="info-section">
+                    <h3>📊 Complaint Handling Statistics</h3>
+                    <div class="info-row">
+                        <div class="info-label">Total Handled:</div>
+                        <div class="info-value"><strong>{{ stats.total }}</strong> complaints</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Resolution Rate:</div>
+                        <div class="info-value">
+                            {% if stats.total > 0 %}
+                            <strong>{{ (stats.resolved / stats.total * 100)|round(1) }}%</strong>
+                            {% else %}0%{% endif %}
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Currently Pending:</div>
+                        <div class="info-value"><strong>{{ stats.pending }}</strong> complaints</div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>📂 Category Breakdown</h3>
+                    <div class="category-list">
+                        {% if stats.categories %}
+                            {% for cat in stats.categories %}
+                                <span class="category-tag">{{ cat.category }}: {{ cat.count }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <p style="color: var(--gray);">No complaints yet</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Tab -->
+            <div id="activityTab" class="tab-mini-content">
+                <div class="info-section">
+                    <h3>🕐 Recent Account Activity</h3>
+                    <div class="info-row">
+                        <div class="info-label">Account Created:</div>
+                        <div class="info-value">{{ user.created_at[:19] if user.created_at else 'N/A' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Last Password Change:</div>
+                        <div class="info-value">{{ user.last_password_change[:19] if user.last_password_change else 'Never' }}</div>
+                    </div>
+                    <div class="info-row">
+                        <div class="info-label">Status:</div>
+                        <div class="info-value">
+                            {% if user.is_active %}
+                            <span style="color: #10b981;">✅ Active</span>
+                            {% else %}
+                            <span style="color: #ef4444;">⛔ Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h3>💡 Tips</h3>
+                    <ul style="margin-left: 20px; color: #ffffff;">
+                        <li>Keep your profile information up to date</li>
+                        <li>Change password regularly for security</li>
+                        <li>Check your complaint statistics to track performance</li>
+                        <li>Contact admin for any role changes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="toast {{ category }}" style="margin-top: 20px; position: static;">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <script>
+        // Floating particles
+        for (let i = 0; i < 25; i++) {
+            let particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.width = Math.random() * 5 + 2 + 'px';
+            particle.style.height = particle.style.width;
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 8 + 's';
+            document.body.appendChild(particle);
+        }
+
+        function switchProfileTab(tab) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-mini-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-mini-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            if (tab === 'info') {
+                document.getElementById('infoTab').classList.add('active');
+                document.querySelector('.tab-mini-btn:nth-child(1)').classList.add('active');
+            } else if (tab === 'stats') {
+                document.getElementById('statsTab').classList.add('active');
+                document.querySelector('.tab-mini-btn:nth-child(2)').classList.add('active');
+            } else if (tab === 'activity') {
+                document.getElementById('activityTab').classList.add('active');
+                document.querySelector('.tab-mini-btn:nth-child(3)').classList.add('active');
+            }
+        }
+
+        function showEditForm() {
+            document.getElementById('editForm').classList.add('active');
+        }
+
+        function hideEditForm() {
+            document.getElementById('editForm').classList.remove('active');
+        }
+
+        // Auto-hide flash messages
+        setTimeout(() => {
+            document.querySelectorAll('.toast').forEach(toast => {
+                setTimeout(() => toast.remove(), 3000);
+            });
+        }, 100);
+    </script>
+</body>
+</html>
