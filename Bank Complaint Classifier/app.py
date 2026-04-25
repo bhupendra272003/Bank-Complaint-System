@@ -4,12 +4,13 @@ import pickle
 import pandas as pd
 import hashlib
 from datetime import datetime
+import os
 import database as db
 from auth import auth_bp, login_manager
 from notification import notify_admin_and_customer
 
 app = Flask(__name__)
-app.secret_key = "your-secret-key-here-change-it-2026"
+app.secret_key = os.environ.get("SECRET_KEY", "your-secret-key-here-change-it-2026")
 
 login_manager.init_app(app)
 app.register_blueprint(auth_bp, url_prefix='/auth')
@@ -399,5 +400,7 @@ def download_report():
     df.to_excel("bank_complaints_report.xlsx", index=False)
     return send_file("bank_complaints_report.xlsx", as_attachment=True)
 
+# ========== PRODUCTION SERVER ==========
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port, debug=False)
