@@ -6,3 +6,4 @@ scikit-learn
 openpyxl
 gunicorn
 python-dotenv
+psycopg2-binary
