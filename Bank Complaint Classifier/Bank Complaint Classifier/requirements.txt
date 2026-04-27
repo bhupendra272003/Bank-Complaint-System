@@ -1,9 +1,0 @@
-Flask
-flask-login
-flask-bcrypt
-pandas
-scikit-learn
-openpyxl
-gunicorn
-python-dotenv
-psycopg2-binary
