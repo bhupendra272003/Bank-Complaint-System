@@ -18,13 +18,7 @@ login_manager.login_view = 'auth.login'
 def load_user(user_id):
     conn = db.get_db_connection()
     cursor = conn.cursor()
-    
-    # CRITICAL FIX: PostgreSQL uses %s, SQLite uses ?
-    if db.DATABASE_URL:
-        cursor.execute('SELECT * FROM users WHERE id = %s', (user_id,))
-    else:
-        cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
-    
+    cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
     user = cursor.fetchone()
     conn.close()
     if user:
@@ -54,6 +48,8 @@ def login():
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
+    # Only admin can register new clerks (in real system)
+    # For demo, anyone can register as clerk
     if request.method == 'POST':
         username = request.form['username']
         email = request.form['email']
@@ -74,3 +70,9 @@ def logout():
     logout_user()
     flash('Logged out successfully', 'success')
     return redirect(url_for('auth.login'))
+
+# Add this route for profile update
+@auth_bp.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html', user=current_user)

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Bank Complaint System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='sunset.css') }}">
+    <style>
+        .edit-btn {
+            background: linear-gradient(135deg, #ff9a56, #ff6b35);
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-right: 5px;
+            transition: var(--transition);
+        }
+        .edit-btn:hover {
+            transform: scale(1.05);
+        }
+        .delete-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+        .delete-btn:hover {
+            background: #ee5a24;
+        }
+        .reset-pwd-btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .reset-pwd-btn:hover {
+            background: #357abd;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideInUp 0.3s ease;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--peach);
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--coffee);
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="navbar-brand">🏦 Bank Complaint System</div>
+        <div class="navbar-menu">
+            <span>🌅 Welcome, {{ user.full_name or user.username }}</span>
+            <a href="{{ url_for('admin_dashboard') }}">📊 Dashboard</a>
+            <a href="{{ url_for('change_password') }}">🔑 Change Password</a>
+            <a href="{{ url_for('profile') }}" style="background: var(--gradient-warm); color: white;">👤 Profile</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn-secondary" style="padding: 5px 15px;">Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Admin Dashboard</h1>
+            <p>Manage complaints, employees, and system settings</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>{{ stats.total }}</h3>
+                <p>Total Complaints</p>
+            </div>
+            <div class="stat-card">
+                <h3>{{ stats.total_users }}</h3>
+                <p>Total Employees</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="fraudCount">0</h3>
+                <p>Fraud Cases</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="resolvedCount">0</h3>
+                <p>Resolved</p>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="glass-card">
+            <div style="padding: 20px; border-bottom: 1px solid #ffe0cc;">
+                <button onclick="switchTab('complaints')" class="btn-secondary" style="margin-right: 10px;">📋 Complaints</button>
+                <button onclick="switchTab('employees')" class="btn-secondary">👥 Employees</button>
+            </div>
+
+            <!-- Complaints Tab -->
+            <div id="complaintsTab" style="padding: 20px;">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>ID</th><th>Customer</th><th>Mobile</th><th>Category</th><th>Priority</th><th>Status</th><th>Created By</th><th>Date</th><th>Action</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for c in complaints %}
+                            <tr>
+                                <td>{{ c.complaint_id }}</a></td>
+                                <td>{{ c.customer_name }}</td>
+                                <td>{{ c.mobile }}</td>
+                                <td>{{ c.category }}</td>
+                                <td class="priority-{{ c.priority|lower }}">{{ c.priority }}</td>
+                                <td>
+                                    <select onchange="updateStatus('{{ c.complaint_id }}', this.value)" class="status-select">
+                                        <option value="Registered" {% if c.status == 'Registered' %}selected{% endif %}>Registered</option>
+                                        <option value="In Progress" {% if c.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                                        <option value="Resolved" {% if c.status == 'Resolved' %}selected{% endif %}>Resolved</option>
+                                        <option value="Rejected" {% if c.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                                    </select>
+                                </td>
+                                <td>{{ c.created_by_name or 'Customer' }}</td>
+                                <td>{{ c.created_at[:10] }}</td>
+                                <td>
+                                    <button class="edit-btn" onclick="deleteComplaint('{{ c.complaint_id }}')">🗑️ Delete</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <button onclick="downloadReport()" class="btn-primary" style="margin-top: 20px;">📥 Download Report</button>
+            </div>
+
+            <!-- Employees Tab -->
+            <div id="employeesTab" style="padding: 20px; display: none;">
+                <button onclick="openAddEmployeeModal()" class="btn-primary" style="margin-bottom: 20px;">➕ Add New Employee</button>
+                
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>ID</th><th>Username</th><th>Full Name</th><th>Email</th><th>Mobile</th><th>Department</th><th>Role</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for u in users %}
+                            <tr>
+                                <td>{{ u.id }}</td>
+                                <td>{{ u.username }}</td>
+                                <td>{{ u.full_name or '-' }}</td>
+                                <td>{{ u.email or '-' }}</td>
+                                <td>{{ u.mobile or '-' }}</td>
+                                <td>{{ u.department or '-' }}</td>
+                                <td><span class="category-badge">{{ u.role }}</span></td>
+                                <td>
+                                    {% if u.role != 'admin' %}
+                                    <a href="{{ url_for('edit_employee', user_id=u.id) }}" class="edit-btn" style="text-decoration: none; display: inline-block;">✏️ Edit</a>
+                                    <button class="reset-pwd-btn" onclick="openResetModal('{{ u.id }}', '{{ u.username }}')">🔑 Reset Pwd</button>
+                                    <button class="delete-btn" onclick="deleteEmployee('{{ u.id }}')">🗑️ Delete</button>
+                                    {% else %}
+                                    <span style="color: #999;">System Admin</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div id="addEmployeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>➕ Add New Employee</h3>
+                <button class="modal-close" onclick="closeAddEmployeeModal()">&times;</button>
+            </div>
+            <form id="addEmployeeForm" onsubmit="addEmployee(event)">
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label>Full Name *</label>
+                    <input type="text" name="full_name" required>
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Mobile</label>
+                    <input type="tel" name="mobile">
+                </div>
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" name="department" placeholder="e.g., Customer Service, Fraud Dept">
+                </div>
+                <div class="form-group">
+                    <label>Role *</label>
+                    <select name="role" required>
+                        <option value="clerk">Clerk</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" name="password" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Create Employee</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔑 Reset Password</h3>
+                <button class="modal-close" onclick="closeResetModal()">&times;</button>
+            </div>
+            <form id="resetForm" onsubmit="resetPassword(event)">
+                <input type="hidden" id="resetUserId" name="user_id">
+                <div class="form-group">
+                    <label>Employee</label>
+                    <input type="text" id="resetUsername" readonly style="background: #f5f5f5;">
+                </div>
+                <div class="form-group">
+                    <label>New Password *</label>
+                    <input type="password" name="new_password" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password *</label>
+                    <input type="password" name="confirm_password" required>
+                </div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Reset Password</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Floating particles
+        for (let i = 0; i < 30; i++) {
+            let particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.width = Math.random() * 5 + 2 + 'px';
+            particle.style.height = particle.style.width;
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 8 + 's';
+            document.body.appendChild(particle);
+        }
+
+        function switchTab(tab) {
+            document.getElementById('complaintsTab').style.display = tab === 'complaints' ? 'block' : 'none';
+            document.getElementById('employeesTab').style.display = tab === 'employees' ? 'block' : 'none';
+        }
+
+        async function updateStatus(complaintId, status) {
+            const response = await fetch('/update_status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({complaint_id: complaintId, status: status})
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast('Status updated!', 'success');
+                location.reload();
+            }
+        }
+
+        async function deleteComplaint(complaintId) {
+            if (confirm('Delete this complaint?')) {
+                const response = await fetch(`/admin/delete_complaint/${complaintId}`, {method: 'DELETE'});
+                if (response.ok) {
+                    showToast('Complaint deleted', 'success');
+                    location.reload();
+                }
+            }
+        }
+
+        function openAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').classList.add('active');
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').classList.remove('active');
+        }
+
+        async function addEmployee(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const response = await fetch('/admin/add_employee', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast('Employee added!', 'success');
+                closeAddEmployeeModal();
+                location.reload();
+            } else {
+                showToast(result.error, 'error');
+            }
+        }
+
+        async function deleteEmployee(userId) {
+            if (confirm('Delete this employee?')) {
+                const response = await fetch(`/admin/delete_employee/${userId}`, {method: 'DELETE'});
+                if (response.ok) {
+                    showToast('Employee deleted', 'success');
+                    location.reload();
+                }
+            }
+        }
+
+        function openResetModal(userId, username) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetUsername').value = username;
+            document.getElementById('resetModal').classList.add('active');
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetModal').classList.remove('active');
+        }
+
+        async function resetPassword(event) {
+            event.preventDefault();
+            const userId = document.getElementById('resetUserId').value;
+            const newPassword = event.target.new_password.value;
+            const confirmPassword = event.target.confirm_password.value;
+            
+            if (newPassword !== confirmPassword) {
+                showToast('Passwords do not match!', 'error');
+                return;
+            }
+            
+            const response = await fetch(`/admin/reset_password/${userId}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({new_password: newPassword})
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('Password reset successful!', 'success');
+                closeResetModal();
+            } else {
+                showToast(result.error, 'error');
+            }
+        }
+
+        function downloadReport() {
+            window.location.href = '/download_report';
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${type === 'success' ? '✅' : '❌'}</span> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Load stats
+        async function loadStats() {
+            const response = await fetch('/get_statistics');
+            const stats = await response.json();
+            document.getElementById('fraudCount').innerText = stats.categories?.find(c => c.name === 'FRAUD')?.count || 0;
+            document.getElementById('resolvedCount').innerText = stats.statuses?.find(s => s.name === 'Resolved')?.count || 0;
+        }
+        loadStats();
+    </script>
+</body>
+</html>

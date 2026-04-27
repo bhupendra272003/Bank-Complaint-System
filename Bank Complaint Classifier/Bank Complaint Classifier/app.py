@@ -5,8 +5,6 @@ import pandas as pd
 import hashlib
 from datetime import datetime
 import os
-import sys
-import traceback
 import database as db
 from auth import auth_bp, login_manager
 from notification import notify_admin_and_customer
@@ -14,57 +12,12 @@ from notification import notify_admin_and_customer
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "your-secret-key-here-change-it-2026")
 
-# ========== DEBUG INFORMATION ==========
-print("=" * 60)
-print("🚀 Starting Bank Complaint Management System")
-print("=" * 60)
-print(f"📍 Python version: {sys.version}")
-print(f"📍 DATABASE_URL: {'✅ SET' if os.environ.get('DATABASE_URL') else '❌ NOT SET'}")
-print(f"📍 SECRET_KEY: {'✅ SET' if os.environ.get('SECRET_KEY') else '❌ NOT SET'}")
-print(f"📍 PORT: {os.environ.get('PORT', '10000')}")
-print("=" * 60)
-
-# ========== ERROR HANDLERS ==========
-
-@app.errorhandler(404)
-def not_found_error(e):
-    return jsonify({"error": "Page not found"}), 404
-
-@app.errorhandler(500)
-def internal_server_error(e):
-    error_details = traceback.format_exc()
-    print(f"❌ Internal Server Error:\n{error_details}")
-    return f"""
-    <html>
-    <head><title>500 Internal Server Error</title></head>
-    <body style="font-family: monospace; padding: 20px;">
-        <h1>❌ Internal Server Error</h1>
-        <pre>{error_details}</pre>
-        <hr>
-        <small>Bank Complaint Management System</small>
-    </body>
-    </html>
-    """, 500
-
-# ========== INITIALIZE ==========
 login_manager.init_app(app)
 app.register_blueprint(auth_bp, url_prefix='/auth')
 
-# ========== LOAD ML MODELS ==========
-try:
-    print("📂 Loading ML models...")
-    model = pickle.load(open("model.pkl", "rb"))
-    vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
-    print("✅ ML models loaded successfully!")
-except FileNotFoundError as e:
-    print(f"❌ Model file not found: {e}")
-    print("⚠️ Please run: python train_model.py")
-    model = None
-    vectorizer = None
-except Exception as e:
-    print(f"❌ Error loading models: {e}")
-    model = None
-    vectorizer = None
+# Load model
+model = pickle.load(open("model.pkl", "rb"))
+vectorizer = pickle.load(open("vectorizer.pkl", "rb"))
 
 priority_map = {
     "fraud": ("🔴 HIGH", "priority-high"),
@@ -87,8 +40,6 @@ def index():
 @app.route("/submit_complaint", methods=["POST"])
 def submit_complaint():
     try:
-        print("📝 New complaint submission received")
-        
         customer_name = request.form.get("customer_name", "").strip()
         mobile = request.form.get("mobile", "").strip()
         id_number = request.form.get("id_number", "").strip()
@@ -100,10 +51,6 @@ def submit_complaint():
         
         if len(mobile) != 10 or not mobile.isdigit():
             return jsonify({"error": "Mobile number must be 10 digits"}), 400
-        
-        # Check if model is loaded
-        if model is None or vectorizer is None:
-            return jsonify({"error": "ML model not loaded. Please train the model first."}), 500
         
         complaint_vec = vectorizer.transform([complaint_text])
         cat = model.predict(complaint_vec)[0]
@@ -127,13 +74,9 @@ def submit_complaint():
         }
         
         db.save_complaint(complaint_data)
-        print(f"✅ Complaint {complaint_id} saved to database")
         
         # Send notifications
-        try:
-            notify_admin_and_customer(complaint_id, customer_name, email, mobile, complaint_text, cat.upper(), priority)
-        except Exception as e:
-            print(f"⚠️ Notification error (non-critical): {e}")
+        notify_admin_and_customer(complaint_id, customer_name, email, mobile, complaint_text, cat.upper(), priority)
         
         return jsonify({
             "success": True,
@@ -147,8 +90,6 @@ def submit_complaint():
         })
         
     except Exception as e:
-        print(f"❌ Complaint submission error: {e}")
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route("/track", methods=["GET", "POST"])
@@ -244,9 +185,6 @@ def clerk_submit_complaint():
             if len(mobile) != 10 or not mobile.isdigit():
                 return jsonify({"error": "Mobile number must be 10 digits"}), 400
             
-            if model is None or vectorizer is None:
-                return jsonify({"error": "ML model not loaded. Please train the model first."}), 500
-            
             complaint_vec = vectorizer.transform([complaint_text])
             cat = model.predict(complaint_vec)[0]
             priority, priority_class = priority_map.get(cat, ("🟡 MEDIUM", "priority-medium"))
@@ -270,10 +208,8 @@ def clerk_submit_complaint():
             
             db.save_complaint(complaint_data)
             
-            try:
-                notify_admin_and_customer(complaint_id, customer_name, email, mobile, complaint_text, cat.upper(), priority)
-            except Exception as e:
-                print(f"⚠️ Notification error: {e}")
+            # Send notifications
+            notify_admin_and_customer(complaint_id, customer_name, email, mobile, complaint_text, cat.upper(), priority)
             
             return jsonify({
                 "success": True,
@@ -284,8 +220,6 @@ def clerk_submit_complaint():
             })
             
         except Exception as e:
-            print(f"❌ Clerk submission error: {e}")
-            traceback.print_exc()
             return jsonify({"error": str(e)}), 500
     
     return render_template("clerk_submit.html", user=current_user)
@@ -466,18 +400,7 @@ def download_report():
     df.to_excel("bank_complaints_report.xlsx", index=False)
     return send_file("bank_complaints_report.xlsx", as_attachment=True)
 
-# ========== HEALTH CHECK ==========
-
-@app.route("/health")
-def health_check():
-    return jsonify({
-        "status": "healthy",
-        "database": "connected" if os.environ.get('DATABASE_URL') else "not set",
-        "models": "loaded" if model is not None else "not loaded"
-    })
-
 # ========== PRODUCTION SERVER ==========
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
-    debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
-    app.run(host="0.0.0.0", port=port, debug=debug_mode)
+    app.run(host="0.0.0.0", port=port, debug=False)
