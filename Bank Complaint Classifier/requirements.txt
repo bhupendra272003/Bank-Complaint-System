@@ -7,20 +7,3 @@ openpyxl
 gunicorn
 python-dotenv
 psycopg2-binary
-
-
-
-
-
-✅ Complaint Registered!
-Complaint ID: 4393CCA7
-
-Category: LOAN
-
-Priority: 🟢 LOW
-
-Customer: Test Customer
-
-Mobile: 7654398776
-
-📱 Use this Complaint ID to track your status online.
