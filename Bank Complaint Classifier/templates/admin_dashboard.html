@@ -154,7 +154,7 @@
                                     </select>
                                 </td>
                                 <td>{{ c.created_by_name or 'Customer' }}</td>
-                                <td>{{ c.created_at[:10] }}</td>
+                               <td>{{ c.created_at.strftime('%Y-%m-%d') if c.created_at else 'N/A' }}</td>
                                 <td>
                                     <button class="edit-btn" onclick="deleteComplaint('{{ c.complaint_id }}')">🗑️ Delete</button>
                                 </td>
